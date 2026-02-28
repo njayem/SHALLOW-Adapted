@@ -49,14 +49,15 @@ def get_device():
 def main():
     args = parse_args()
 
-    gt_transcriptions, pred_transcriptions = load_gt_pred_transcriptions(
+    segment_ids, gt_transcriptions, pred_transcriptions = load_gt_pred_transcriptions(
         gt_path=args.gt_transcriptions_path,
         predictions_path=args.predictions_path
         )
 
     if args.examples_limit > 0:
-        gt_transcriptions  = gt_transcriptions[:args.examples_limit]
-        pred_transcriptions = pred_transcriptions[:args.examples_limit]
+            segment_ids = segment_ids[:args.examples_limit]
+            gt_transcriptions  = gt_transcriptions[:args.examples_limit]
+            pred_transcriptions = pred_transcriptions[:args.examples_limit]
 
     print(f'Loaded {len(gt_transcriptions)} examples', flush=True)
     print(f'Loaded {len(pred_transcriptions)} examples', flush=True)
@@ -162,6 +163,13 @@ def main():
         return
 
     df = pd.DataFrame(all_results)
+
+    if len(segment_ids) == len(df):
+        df['segment_id'] = segment_ids
+        df['participant'] = df['segment_id'].str.extract(r'DISCOURSE_(\d+)_')[0]
+        df['task'] = df['segment_id'].str.replace(r'DISCOURSE_\d+_', '', regex=True)
+    else:
+        print(f'⚠ Segment ID mismatch: {len(segment_ids)} IDs vs {len(df)} results', flush=True)
 
     # -------------------------------------------------------------------------
     # Aggregated scoring

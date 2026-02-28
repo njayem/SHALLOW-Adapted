@@ -182,7 +182,7 @@ def keep_intersection_and_sort(gt_transcriptions, pred_transcriptions):
 def load_gt_pred_transcriptions(gt_path, predictions_path):
     """
     Load, clean, and normalize ground truth and predicted transcriptions.
-    Returns two lists (gt, pred) aligned by segment ID.
+    Returns three lists (segment_ids, gt, pred) aligned by segment ID.
     """
     gt_transcriptions   = load_transcriptions(gt_path)
     pred_transcriptions = load_transcriptions(predictions_path)
@@ -198,8 +198,11 @@ def load_gt_pred_transcriptions(gt_path, predictions_path):
     gt_transcriptions   = {k: clean_transcript_models(str(v)) for k, v in gt_transcriptions.items()}
     pred_transcriptions = {k: clean_transcript_models(str(v)) for k, v in pred_transcriptions.items()}
 
+    # Preserve segment IDs before converting to lists
+    segment_ids = list(gt_transcriptions.keys())
+
     english_normalizer  = EnglishTextNormalizer()
     gt_transcriptions   = [english_normalizer(gt) for gt in gt_transcriptions.values()]
     pred_transcriptions = [english_normalizer(pt) for pt in pred_transcriptions.values()]
 
-    return gt_transcriptions, pred_transcriptions
+    return segment_ids, gt_transcriptions, pred_transcriptions
