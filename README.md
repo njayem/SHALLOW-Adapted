@@ -130,14 +130,25 @@ python compute_mh.py --results_dir ./results
 python patch_mh.py --results_dir ./results
 ```
 
-### Input format
+### Preparing your data
 
-Transcription files must follow the format `<segment_id>: <transcription>`:
+You need one plain text file per model plus one for the manual ground truth. Each file must have one segment per line in the format `<segment_id>: <transcription>`. Segment IDs must match exactly across all files — only segments present in both the ground truth file and the model file will be evaluated; unmatched segments are silently excluded.
 
 ```
-DISCOURSE_001: um so for the next part um this part is about ...
-DISCOURSE_002: so first I would like you to talk about a few things...
+SEGMENT_001: this is the first transcription
+SEGMENT_002: this is the second transcription
 ```
+
+Name your files following the convention used by the pipeline:
+
+```
+manual_shallow.txt       ← ground truth
+whisper_shallow.txt      ← Whisper hypotheses
+canary_shallow.txt       ← Canary hypotheses
+parakeet_shallow.txt     ← Parakeet hypotheses
+```
+
+Place all files in `data/shallow_format/` before running Step 1. The data files are not included in this repository.
 
 ---
 
