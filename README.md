@@ -2,7 +2,7 @@
 
 ![SHALLOW](assets/shallow.png)
 
-> This is an adaptation of the [SHALLOW benchmark](https://github.com/SALT-Research/SHALLOW) by Alkis Koudounas, Moreno La Quatra, Manuel Giollo, Marco Sabato Siniscalchi, and Elena Baralis, modified for local Windows execution on the DISCOURSE study of the VOICI Speech Bank at the Centre of Excellence in Youth Mental Health, Douglas Research Centre.
+> This is an adaptation of the [SHALLOW benchmark](https://github.com/SALT-Research/SHALLOW) by Alkis Koudounas, Moreno La Quatra, Manuel Giollo, Marco Sabato Siniscalchi, and Elena Baralis, modified for local Windows execution on the DISCOURSE study of the VOICI Speech Bank at the [Centre of Excellence in Youth Mental Health](https://ceymh-cesmj.ca/), [Douglas Research Centre](https://douglas.research.mcgill.ca/).
 
 This adaptation was used to evaluate three ASR models against manual transcriptions from the DISCOURSE study:
 
