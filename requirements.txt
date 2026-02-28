@@ -1,15 +1,38 @@
-benepar==0.2.0
-evaluate==0.4.3
-jellyfish==1.2.0
+# SHALLOW benchmark — verified working dependencies (Nadine El-Mufti, 2026)
+# Tested on: Windows 11 (CPU), macOS Apple Silicon (MPS)
+# Python: 3.10
+# Install: pip install -r requirements.txt
+
+# --- Core ASR / text processing ---
 jiwer==3.1.0
-language_tool_python==2.9.3
-networkx==3.4.2
-nltk==3.9.1
-numpy==2.2.5
-pandas==1.4.3
-sentence_transformers==4.1.0
-spacy==3.8.5
-torch==2.7.0
-tqdm==4.67.1
-transformers==4.51.3
+jellyfish==1.2.0
 whisper_normalizer==0.1.11
+
+# --- Grammar / morphology ---
+language_tool_python==2.9.3
+# Note: requires Java >= 17 (conda install -c conda-forge openjdk=17 -y)
+
+# --- NLP / parsing ---
+spacy==3.8.5
+benepar==0.2.0
+nltk==3.9.1
+networkx==3.4.2
+
+# --- ML / embeddings ---
+torch==2.7.0
+sentence_transformers==4.1.0
+transformers==4.41.0
+tokenizers==0.19.1
+# Note: transformers 4.41.0 requires tokenizers==0.19.1 specifically
+
+# --- Evaluation metrics ---
+evaluate==0.4.3
+bert-score
+
+# --- Data / utilities ---
+numpy==1.26.4
+# Note: numpy 2.x breaks pandas 1.x — pin to 1.26.x
+pandas==2.2.3
+# Note: pandas 2.x required for numpy 1.26 compatibility
+scipy
+tqdm==4.67.1

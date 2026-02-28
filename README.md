@@ -1,119 +1,175 @@
-# SHALLOW Benchmark
+# SHALLOW Benchmark — Windows Adaptation
 
 ![SHALLOW](assets/shallow.png)
 
-We present SHALLOW, the first hallucination benchmark for ASR models.
+> This is an adaptation of the [SHALLOW benchmark](https://github.com/SALT-Research/SHALLOW) by Alkis Koudounas, Moreno La Quatra, Manuel Giollo, Marco Sabato Siniscalchi, and Elena Baralis, modified for local Windows execution on the DISCOURSE study of the VOICI Speech Bank at the Centre of Excellence in Youth Mental Health, Douglas Research Centre.
 
-SHALLOW extends traditional WER scores, and provides a more comprehensive evaluation of ASR models by measuring the model's ability to produce semantically and syntactically correct transcriptions. SHALLOW decomposes ASR errors into four complementary dimensions:
-1. **Lexical Fabrications (LF)**: Content with no basis in the input audio, measured through insertion, substitution, and deletion ratios at a lexical level.
-2. **Phonetic Fabrications (PF)**: Errors where the model generates phonetically similar but lexically incorrect words, measured using metaphone-based distance metrics.
-3. **Morphological Hallucinations (MH)**: Structural and grammatical distortions that alter the linguistic form of the transcription.
-4. **Semantic Hallucinations (SH)**: Meaning alterations captured at both local and global levels, measuring how semantic content is preserved or distorted.
+This adaptation was used to evaluate three ASR models against manual transcriptions from the DISCOURSE study:
 
-## Table of Contents
-- [Installation](#installation)
-- [Usage](#usage)
-- [Example](#example)
-- [Datasets](#datasets)
-- [Models](#models)
-- [Results](#results)
-- [Synthetic Data](#synthetic-data)
-- [License](#license)
-- [Contact](#contact)
-- [Citation](#citation)
+| Model | HuggingFace |
+|---|---|
+| Whisper Large v2 | [openai/whisper-large-v2](https://huggingface.co/openai/whisper-large-v2) |
+| Canary 1B v2 | [nvidia/canary-1b-v2](https://huggingface.co/nvidia/canary-1b-v2) |
+| Parakeet TDT 1.1B | [nvidia/parakeet-tdt-1.1b](https://huggingface.co/nvidia/parakeet-tdt-1.1b) |
+
+Each model's automatic transcriptions are compared against a manual ground truth transcription using the SHALLOW hallucination metrics (LF, PF, MH, SH, WER).
+
+---
+
+## Changes from original
+
+All metrics (LF, PF, MH, SH, WER) and their formulas are unchanged. The following are infrastructure and compatibility changes only.
+
+Metrics are computed on the **intersection** of ground truth and prediction segment IDs — segments present in only one file are excluded.
+
+| File | What changed | Why |
+|---|---|---|
+| `morphological.py` | `LanguageToolPublicAPI` → `LanguageTool` | The original sent text to LanguageTool's remote public server. Replaced with a local Java process so the benchmark runs offline with no external dependency. |
+| `morphological.py` | Dependency tree comparison → constituency parse + Jaccard | The original compared full spaCy dependency parses (head/dep/token tuples per word). Replaced with benepar constituency parses, extracting non-terminal phrase labels (NP, VP, etc.) and computing Jaccard distance between their sets. |
+| `morphological.py` | Error categorisation via `match.message` → `match.category` / `match.ruleId` | The original searched for keywords in the human-readable error message string. Replaced with the structured `category` and `ruleId` fields that LanguageTool provides for programmatic use. |
+| `morphological.py` | LanguageTool and spaCy+benepar initialised once at startup | The original created a new LanguageTool Java process and loaded the spaCy model on every example. Both are now loaded once when the benchmark starts and reused throughout. |
+| `semantic.py` | BERTScore loaded once at init | The original called `evaluate.load("bertscore")` inside the scoring function, reloading it from disk on every example. Moved to init so it is loaded once. |
+| `semantic.py` | NLI pipeline device resolved dynamically | The original hardcoded `device=0`, assuming a CUDA GPU is always available. Now resolves the device based on what is actually available (CUDA or CPU). |
+| `semantic.py` | Added in-memory embedding cache (`_emb_cache`) | The original recomputed BERT embeddings for every word window, including repeated texts, resulting in O(N²) forward passes per example. The cache stores each embedding the first time it is computed and reuses it for subsequent occurrences. |
+| `fabrications.py` | `compute_measures` → `jiwer.process_words` shim | `compute_measures` was removed in jiwer 3.0. Replaced with a compatibility shim using `process_words` that returns the same values. |
+| `main.py` | `multiprocessing.Pool` → sequential per-example loop | The pool caused deadlocks on Windows due to interactions between LanguageTool's Java subprocess, HuggingFace tokenizer threads, and Python's `spawn` start method. |
+| `requirements.txt` | Created from scratch with pinned versions | The original repository did not ship a pinned requirements file. numpy 2.x is incompatible with pandas 1.x, and certain transformers versions caused issues with the models used. Versions are pinned to a confirmed working combination. |
+
+## Additional scripts
+
+- `run_shallow.py` — orchestrates the full benchmark pipeline locally on Windows, replacing the original `compute_shallow_scores.sh`
+- `compute_mh.py` — standalone script to compute real MH scores using local LanguageTool + benepar on existing CSVs
+- `patch_mh.py` — patches MH scores into the combined and summary CSVs after `compute_mh.py` finishes
+
+---
 
 ## Installation
-To install the required packages, run:
+
+### Prerequisites
+
+- Python 3.10
+- Windows
+- Java >= 17 (required for LanguageTool MH scoring)
+
+```bash
+conda create -n shallow python=3.10 -y
+conda activate shallow
+conda install -c conda-forge openjdk=17 -y
+```
+
+### Python dependencies
+
 ```bash
 pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+python -c "import benepar; benepar.download('benepar_en3')"
+python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); \
+           nltk.download('averaged_perceptron_tagger'); \
+           nltk.download('averaged_perceptron_tagger_eng')"
 ```
+
+### Pre-warm LanguageTool (one-time, downloads ~255 MB)
+
+```bash
+python -c "import language_tool_python; t = language_tool_python.LanguageTool('en-US'); t.close(); print('OK')"
+```
+
+---
+
+## Folder Structure
+
+```
+SHALLOW/
+├── src/
+│   ├── main.py
+│   ├── shallow.py
+│   ├── fabrications.py
+│   ├── morphological.py
+│   ├── semantic.py
+│   └── utils.py
+├── data/
+│   └── shallow_format/
+│       ├── manual_shallow.txt
+│       ├── whisper_shallow.txt
+│       ├── canary_shallow.txt
+│       └── parakeet_shallow.txt
+├── results/                 ← auto-created on first run
+├── run_shallow.py
+├── compute_mh.py
+├── patch_mh.py
+├── requirements.txt
+└── README.md
+```
+
+---
 
 ## Usage
-To run the SHALLOW benchmark, use the following command:
+
+### Step 1 — Run the benchmark (LF, PF, SH, WER)
+
 ```bash
-python main.py \
- --dataset_name DATASET_NAME \
- --model_name MODEL_NAME \
- --gt_transcriptions_path hyp.txt \
- --predictions_path ref.txt \
- --output_dir results/ 
-```
-You should replace `DATASET_NAME` and `MODEL_NAME` with the appropriate values for your dataset and model. The `gt_transcriptions_path` and `predictions_path` should point to the ground truth and predicted transcriptions, respectively. The `output_dir` is where the results (i.e., metrics and statistics) will be saved. 
-
-Please note that the `gt_transcriptions_path` and `predictions_path` should be in the format: <`<segment_id>: <transcription>`.
-<br>
-For example:
-```
-audio1.wav: this is the first audio
-audio2.wav: this is the second audio
-...
+python run_shallow.py \
+    --shallow_format_dir ./data/shallow_format \
+    --output_dir ./results
 ```
 
-## Example
-To run the SHALLOW benchmark on the CHiME6 dataset with the Canary 1B model, use the following command:
+Optional arguments:
+```
+--models    whisper canary parakeet    (default: all three)
+```
+
+### Step 2 — Compute real MH scores
+
 ```bash
-CUDA_DEVICE=0
-DATASET_NAME=chime6
-MODEL_NAME=canary1b
-
-CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python main.py \
- --dataset_name $DATASET_NAME \
- --model_name $MODEL_NAME \
- --gt_transcriptions_path gt/${DATASET_NAME}_gt.txt \
- --predictions_path inference/${DATASET_NAME}/${DATASET_NAME}_${MODEL_NAME}.txt \
- --output_dir results/ \
- --examples_limit 50 \
- --num_workers 2
+python compute_mh.py --results_dir ./results
 ```
-This will run the SHALLOW benchmark on the first 50 examples of the CHiME6 dataset using the Canary 1B model, and save the results in the `results/` directory. The `--num_workers` argument specifies the number of workers to use for parallel processing. You can adjust this value based on your system's capabilities.
 
-## Datasets
-For speech data, we included multiple categories to test hallucination behavior across different conditions.
-- **Standard Speech Conditions:** We use LibriSpeech-Other (read audiobooks), TEDLIUM (prepared presentations), and GIGASPEECH (multi-domain spoken content) to have standardized results on well-studied ASR domains;
-- **Challenging Acoustic Environments:** CHiME-6 provides conversational speech recorded during real dinner parties with natural domestic noise, helping evaluate how environmental challenges may results in different types of hallucinations.
-- **Heavily-Accented Domains:** We include CORAAL (African American Language varieties), CV16-Accented (accented English), GLOBE-v2 (164 worldwide English accents), and SpeechOcean (non-native English speakers with Mandarin as L1) to evaluate whether accent variation affects hallucination patterns.
-- **Specialized Domains:** MyST Child includes children’s speech in educational contexts, while VoxPopuli contains formal political speeches, both representing domain-specific vocabulary that may trigger semantic or lexical hallucinations.
+### Step 3 — Patch MH into combined and summary CSVs
 
-## Models
-For model selection, we evaluated representative models from four distinct ASR architecture families to analyze how architectural choices influence hallucination behaviors:
+```bash
+python patch_mh.py --results_dir ./results
+```
 
-- **Self-Supervised Speech Encoders:** HuBERT (*HuB*) employs masked prediction objectives with a focus on acoustic feature extraction, while *MMS* is a strongly multilingual encoder trained on 1,406 different languages for language-agnostic representation.
-- **Encoder-Decoder Transformers:** Whisper-Large-v2 (*W-Lv2*) and Whisper-Large-v3 (*W-Lv3*) leverage large-scale weakly supervised training for strong generalization, while *Canary* uses token-driven decoding for formatting control. This model family balances acoustic and linguistic modeling through specific model sub-networks (e.g., encoder and decoder).
-- **Encoder-Transducer Models:** We evaluate *Parakeet*, a FastConformer-based model with monotonic alignment between audio and text sequences. This creates a closer connection between acoustic and linguistic components.
-- **Multimodal SpeechLLMs**: This newer paradigm includes models that extend linguistic modeling with multimodal speech processing. We include SALMONN (*SALM.*), Qwen2Audio (*Q2A*), Qwen2.5Omni (*Q2.5O*) Granite-Speech (*Granite*) , Kimi-Audio (*Kimi*), and Phi4-Multimodal-Instruct (*Phi*), which process speech within decoder-only language models, providing a bias towards strong language modeling capabilities.
+### Input format
 
-## Results
-The following table shows the results of the SHALLOW benchmark on various ASR models. The values represent the average scores across the 10 datasets used in the benchmark. The models are compared based on their performance in terms of WER, Lexical Fabrications, Phonetic Fabrications, Morphological Hallucinations, and Semantic Hallucination metrics.
+Transcription files must follow the format `<segment_id>: <transcription>`:
 
-| | **HuB** | **MMS** | **W-Lv2** | **Canary** | **W-Lv3** | **Parakeet** | **SALM.** | **Q2A** | **Granite** | **Kimi** | **Q2.5O** | **Phi4** |
-|:---------------:|:----------------:|:----------------:|:------------------:|:-------------------:|:------------------:|:-----------------------------------:|:------------------:|:----------------:|:--------------------:|:-----------------:|:------------------:|:-----------------:|
-| **WER** | 40.94 | 27.45 | 19.12 | 14.26 | 14.20 | 12.54 | 99.92 | 21.99 | 15.21 | 13.53 | 12.76 | 12.07 |
-| **Lexical**  | 14.56 | 11.03 | 8.08  | 5.43  | 6.74  | 5.38  | 13.59 | 7.13  | 5.56  | 6.92  | 5.17  | 6.18  |
-| **Phonetic**  | 42.87 | 34.38 | 35.98 | 33.92 | 34.70 | 33.36 | 40.80 | 36.75 | 34.18 | 35.14 | 33.85 | 33.89 |
-| **Mophologic**  | 27.55 | 23.54 | 13.15 | 11.05 | 11.13 | 10.59 | 16.54 | 13.77 | 10.13 | 12.30 | 10.56 | 11.22 |
-| **Semantic**  | 35.30 | 26.11 | 17.37 | 14.98 | 14.74 | 13.33 | 23.23 | 19.55 | 13.56 | 15.48 | 12.71 | 14.37 |
+```
+DISCOURSE_001: um so for the next part um this part is about ...
+DISCOURSE_002: so first I would like you to talk about a few things...
+```
 
-The figure below shows the comparison of the best models from each architecture type (*MMS* Encoder, *Parakeet* Encoder-Transducer, *Phi4-MM-IT Decoder-only) across evaluated speech datasets. The scores are displayed as performance metrics where higher values indicate better performance, i.e., the inverse of hallucination scores.
-![SHALLOW](assets/performance.png)
+---
 
-Please refer to the paper for detailed results and analysis of the SHALLOW benchmark. 
+## Authors
 
-## Synthetic Data
-We provide a synthetic dataset to evaluate the goodness of SHALLOW metrics, licensed under [CC-BY-NC-SA-4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). The dataset is generated using GPT-4o model, and includes various types of hallucinations. The dataset is available in the `synthetic_eval_data` directory.
+**Nadine El-Mufti** · [nadine.el-mufti@mail.mcgill.ca](mailto:nadine.el-mufti@mail.mcgill.ca)
+**Dr. Alban Voppel** · [alban.voppel@mail.mcgill.ca](mailto:alban.voppel@mail.mcgill.ca)
+**Dr. Lena Palaniyappan** · [lena.palaniyappan@mcgill.ca](mailto:lena.palaniyappan@mcgill.ca)
+
+Centre of Excellence in Youth Mental Health, Douglas Research Centre — McGill University
+
+*For questions regarding this adaptation, contact Nadine El-Mufti.*
+
+---
+
+## Attribution & Citation
+
+The SHALLOW benchmark methodology, metrics, and original codebase are the work of Alkis Koudounas, Moreno La Quatra, Manuel Giollo, Sabato Marco Siniscalchi, and Elena Baralis. This repository contains only an adaptation of [their implementation](https://github.com/SALT-Research/SHALLOW) for local Windows execution. All intellectual ownership of the benchmark itself remains with the original authors.
+
+If you use this adaptation, please cite the original SHALLOW paper for the benchmark methodology, and reference this repository for the adapted implementation:
+
+```bibtex
+@article{koudounas2025shallow,
+  title     = {Hallucination Benchmark for Speech Foundation Models},
+  author    = {Koudounas, Alkis and La Quatra, Moreno and Giollo, Manuel and Siniscalchi, Sabato Marco and Baralis, Elena},
+  journal   = {arXiv preprint arXiv:2510.16567},
+  year      = {2025}
+}
+```
+
+---
 
 ## License
-This project is licensed under the Apache 2.0 License. See the [LICENSE](LICENSE) file for details.
 
-## Contact
-For any questions or inquiries, please contact [Alkis Koudounas](mailto:alkis.koudounas@polito.it) or [Moreno La Quatra](mailto:moreno.laquatra@unikore.it).
-
-## Citation
-If you use SHALLOW in your research, please cite our paper.
-<!-- ```bibtex
-@inproceedings{Koudounas2025SHALLOW,
-  title={SHALLOW: A Benchmark for Hallucination in Automatic Speech Recognition},
-  author={Alkis Koudounas and Moreno La Quatra and Manuel Giollo and Marco Sabato Siniscalchi and Elena Baralis},
-  booktitle={},
-  year={}}
-``` -->
-
+Apache 2.0 — see [LICENSE](LICENSE).
