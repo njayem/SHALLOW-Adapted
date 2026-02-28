@@ -2,7 +2,7 @@
 
 ![SHALLOW](assets/shallow.png)
 
-> This is an adaptation of the [SHALLOW benchmark](https://github.com/SALT-Research/SHALLOW) by Alkis Koudounas, Moreno La Quatra, Manuel Giollo, Marco Sabato Siniscalchi, and Elena Baralis, modified for local Windows execution on the DISCOURSE study of the VOICI Speech Bank at the [Centre of Excellence in Youth Mental Health](https://ceymh-cesmj.ca/), [Douglas Research Centre](https://douglas.research.mcgill.ca/).
+> This is an adaptation of the [SHALLOW benchmark](https://github.com/SALT-Research/SHALLOW) by Alkis Koudounas, Moreno La Quatra, Manuel Giollo, Marco Sabato Siniscalchi, and Elena Baralis, modified for local Windows execution on the DISCOURSE study of the VOICI Speech Bank at the Centre of Excellence in Youth Mental Health, Douglas Research Centre.
 
 This adaptation was used to evaluate three ASR models against manual transcriptions from the DISCOURSE study:
 
@@ -139,13 +139,13 @@ SEGMENT_001: this is the first transcription
 SEGMENT_002: this is the second transcription
 ```
 
-Name your files following the convention used by the pipeline:
+The following file names are examples based on the models used in this study. You can use any model name — just name your file `<modelname>_shallow.txt` and pass `--models <modelname>` to `run_shallow.py`.
 
 ```
-manual_shallow.txt       ← ground truth
-whisper_shallow.txt      ← Whisper hypotheses
-canary_shallow.txt       ← Canary hypotheses
-parakeet_shallow.txt     ← Parakeet hypotheses
+manual_shallow.txt       ← ground truth (required, always this name)
+whisper_shallow.txt      ← example: Whisper hypotheses
+canary_shallow.txt       ← example: Canary hypotheses
+parakeet_shallow.txt     ← example: Parakeet hypotheses
 ```
 
 Place all files in `data/shallow_format/` before running Step 1. The data files are not included in this repository.
@@ -154,9 +154,9 @@ Place all files in `data/shallow_format/` before running Step 1. The data files 
 
 ## Authors
 
-- **Nadine El-Mufti** · [nadine.el-mufti@mail.mcgill.ca](mailto:nadine.el-mufti@mail.mcgill.ca)
-- **Dr. Alban Voppel** · [alban.voppel@mail.mcgill.ca](mailto:alban.voppel@mail.mcgill.ca)
-- **Dr. Lena Palaniyappan** · [lena.palaniyappan@mcgill.ca](mailto:lena.palaniyappan@mcgill.ca)
+**Nadine El-Mufti** · [nadine.el-mufti@mail.mcgill.ca](mailto:nadine.el-mufti@mail.mcgill.ca)
+**Dr. Alban Voppel** · [alban.voppel@mail.mcgill.ca](mailto:alban.voppel@mail.mcgill.ca)
+**Dr. Lena Palaniyappan** · [lena.palaniyappan@mcgill.ca](mailto:lena.palaniyappan@mcgill.ca)
 
 Centre of Excellence in Youth Mental Health, Douglas Research Centre — McGill University
 
