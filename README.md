@@ -154,9 +154,9 @@ Place all files in `data/shallow_format/` before running Step 1. The data files 
 
 ## Authors
 
-**Nadine El-Mufti** · [nadine.el-mufti@mail.mcgill.ca](mailto:nadine.el-mufti@mail.mcgill.ca)
-**Dr. Alban Voppel** · [alban.voppel@mail.mcgill.ca](mailto:alban.voppel@mail.mcgill.ca)
-**Dr. Lena Palaniyappan** · [lena.palaniyappan@mcgill.ca](mailto:lena.palaniyappan@mcgill.ca)
+- **Nadine El-Mufti** · [nadine.el-mufti@mail.mcgill.ca](mailto:nadine.el-mufti@mail.mcgill.ca)
+- **Dr. Alban Voppel** · [alban.voppel@mail.mcgill.ca](mailto:alban.voppel@mail.mcgill.ca)
+- **Dr. Lena Palaniyappan** · [lena.palaniyappan@mcgill.ca](mailto:lena.palaniyappan@mcgill.ca)
 
 Centre of Excellence in Youth Mental Health, Douglas Research Centre — McGill University
 
