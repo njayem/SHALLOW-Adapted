@@ -6,11 +6,15 @@
 
 This adaptation was used to evaluate three ASR models against manual transcriptions from the DISCOURSE study:
 
+<div align="center">
+
 | Model | HuggingFace |
 |---|---|
 | Whisper Large v2 | [openai/whisper-large-v2](https://huggingface.co/openai/whisper-large-v2) |
 | Canary 1B v2 | [nvidia/canary-1b-v2](https://huggingface.co/nvidia/canary-1b-v2) |
 | Parakeet TDT 1.1B | [nvidia/parakeet-tdt-1.1b](https://huggingface.co/nvidia/parakeet-tdt-1.1b) |
+
+</div>
 
 Each model's automatic transcriptions are compared against a manual ground truth transcription using the SHALLOW hallucination metrics (LF, PF, MH, SH, WER).
 
@@ -21,6 +25,8 @@ Each model's automatic transcriptions are compared against a manual ground truth
 All metrics (LF, PF, MH, SH, WER) and their formulas are unchanged. The following are infrastructure and compatibility changes only.
 
 Metrics are computed on the **intersection** of ground truth and prediction segment IDs — segments present in only one file are excluded.
+
+<div align="center">
 
 | File | What changed | Why |
 |---|---|---|
@@ -34,6 +40,8 @@ Metrics are computed on the **intersection** of ground truth and prediction segm
 | `fabrications.py` | `compute_measures` → `jiwer.process_words` shim | `compute_measures` was removed in jiwer 3.0. Replaced with a compatibility shim using `process_words` that returns the same values. |
 | `main.py` | `multiprocessing.Pool` → sequential per-example loop | The pool caused deadlocks on Windows due to interactions between LanguageTool's Java subprocess, HuggingFace tokenizer threads, and Python's `spawn` start method. |
 | `requirements.txt` | Created from scratch with pinned versions | The original repository did not ship a pinned requirements file. numpy 2.x is incompatible with pandas 1.x, and certain transformers versions caused issues with the models used. Versions are pinned to a confirmed working combination. |
+
+</div>
 
 ## Additional scripts
 
